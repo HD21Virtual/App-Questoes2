@@ -3,8 +3,7 @@ import { fetchAllQuestions, setupAllListeners, clearAllListeners } from './servi
 import { setupAllEventListeners } from './event-listeners.js';
 import { state, resetStateOnLogout } from './state.js';
 import { displayQuestion } from './features/question-viewer.js';
-import { updateReviewCard } from './features/srs.js';
-import { applyFilters, setupCustomSelects } from './features/filter.js';
+import { setupCustomSelects } from './features/filter.js';
 import { navigateToView } from './ui/navigation.js';
 import { updateUserUI } from './ui/ui-helpers.js';
 import DOM from './dom-elements.js';
@@ -23,18 +22,20 @@ Chart.register(ChartDataLabels);
  * @param {object} user - O objeto de usuário do Firebase.
  */
 async function onLogin(user) {
-    updateUserUI(user);
-    navigateToView('inicio-view');
-
     state.currentUser = user;
+    updateUserUI(user);
 
-    await fetchAllQuestions();
-    
-    setupCustomSelects();
-    applyFilters();
-    
     // Inicia os listeners do Firestore para dados do usuário.
     setupAllListeners(user.uid);
+    
+    // Busca os dados gerais de questões
+    await fetchAllQuestions();
+    
+    // Configura os filtros com os dados carregados
+    setupCustomSelects();
+    
+    // Navega para a view inicial. Os listeners já estão ativos e irão popular a UI.
+    navigateToView('inicio-view');
 }
 
 /**
@@ -53,7 +54,6 @@ function onLogout() {
     navigateToView('inicio-view');
     displayQuestion(); // Mostra a mensagem de "faça login"
     DOM.savedCadernosListContainer.innerHTML = '<p class="text-center text-gray-500">Faça login para ver seus cadernos.</p>';
-    DOM.savedFiltersListContainer.innerHTML = '<p class="text-center text-gray-500">Faça login para ver seus filtros.</p>';
     DOM.reviewCard.classList.add('hidden');
 }
 
@@ -69,3 +69,4 @@ function main() {
 
 // Inicia a aplicação quando o DOM estiver completamente carregado.
 document.addEventListener('DOMContentLoaded', main);
+
