@@ -1,5 +1,5 @@
 import DOM from './dom-elements.js';
-import { navigateToView, handleHamburgerMenu } from './ui/navigation.js';
+import { navigateToView, handleHamburgerMenu, handleNavigation } from './ui/navigation.js';
 import { openAuthModal, openSaveModal, openLoadModal, openCadernoModal, openNameModal, closeAuthModal, closeSaveModal, closeLoadModal, closeCadernoModal, closeNameModal, closeConfirmationModal, closeStatsModal, handleConfirmation, openConfirmationModal } from './ui/modal.js';
 import { state } from './state.js';
 import { handleEmailLogin, handleEmailRegister, handleGoogleLogin, handleSignOut } from './services/auth.js';
@@ -15,16 +15,19 @@ export function setupAllEventListeners() {
     document.body.addEventListener('click', (event) => {
         const target = event.target;
 
+        // Navigation
+        const navLink = target.closest('.nav-link');
+        if (navLink) {
+            handleNavigation(event);
+            return;
+        }
+
         // Auth buttons
         if (target.closest('#show-login-modal-btn') || target.closest('#show-login-modal-btn-mobile') || target.closest('#login-from-empty')) openAuthModal();
         if (target.closest('#login-btn')) handleEmailLogin();
         if (target.closest('#register-btn')) handleEmailRegister();
         if (target.closest('#google-login-btn')) handleGoogleLogin();
         if (target.closest('#logout-btn') || target.closest('#logout-btn-mobile')) handleSignOut();
-
-        // Navigation
-        const navLink = target.closest('.nav-link');
-        if (navLink) navigateToView(navLink.dataset.view);
 
         // Modals
         if (target.closest('#save-filter-btn')) openSaveModal();
@@ -159,3 +162,4 @@ export function setupAllEventListeners() {
 
     setupCustomSelects();
 }
+
