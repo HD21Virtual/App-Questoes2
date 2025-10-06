@@ -1,5 +1,4 @@
 import DOM from './dom-elements.js';
-import { clearAllListeners } from './services/firestore.js';
 
 /**
  * @file js/state.js
@@ -47,7 +46,8 @@ export function setState(key, value) {
 }
 
 export function resetStateOnLogout() {
-    clearAllListeners();
+    // A chamada para limpar os listeners foi removida daqui
+    // e é tratada no app.js para evitar dependências circulares.
     state = { 
         ...initialState,
         // Mantemos dados que não dependem do usuário
