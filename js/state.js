@@ -1,5 +1,5 @@
 import DOM from './dom-elements.js';
-import { clearUnsubscribes } from './services/firestore.js';
+import { clearAllListeners } from './services/firestore.js';
 
 /**
  * @file js/state.js
@@ -37,8 +37,17 @@ const initialState = {
 
 export let state = { ...initialState };
 
+/**
+ * Atualiza uma propriedade do estado global.
+ * @param {string} key - A chave do estado a ser atualizada.
+ * @param {*} value - O novo valor para a chave.
+ */
+export function setState(key, value) {
+    state[key] = value;
+}
+
 export function resetStateOnLogout() {
-    clearUnsubscribes();
+    clearAllListeners();
     state = { 
         ...initialState,
         // Mantemos dados que não dependem do usuário
@@ -68,3 +77,4 @@ export function clearSessionStats() {
 export function getActiveContainer() {
     return state.currentCadernoId ? DOM.savedCadernosListContainer : DOM.vadeMecumContentArea;
 }
+
