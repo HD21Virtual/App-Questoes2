@@ -2,13 +2,19 @@ import DOM from '../dom-elements.js';
 import { state } from '../state.js';
 import { exitAddMode, renderFoldersAndCadernos } from '../features/caderno.js';
 import { renderMateriasView } from '../features/materias.js';
-import { clearAllFilters, applyFilters } from '../features/filter.js';
+import { clearAllFilters } from '../features/filter.js';
 import { updateStatsPageUI } from '../features/stats.js';
 
 /**
  * @file js/ui/navigation.js
  * @description Controla a navegação entre as diferentes visualizações (telas) da aplicação.
  */
+
+export function handleNavigation(event) {
+    event.preventDefault();
+    const viewId = event.target.closest('.nav-link').dataset.view;
+    navigateToView(viewId);
+}
 
 export function navigateToView(viewId) {
     if (state.isAddingQuestionsMode.active && viewId !== 'vade-mecum-view') {
@@ -31,7 +37,6 @@ export function navigateToView(viewId) {
     
     // Lógica específica para cada view
     if (viewId === 'vade-mecum-view' && !state.isReviewSession) {
-        state.isReviewSession = false;
         DOM.vadeMecumTitle.textContent = "Vade Mecum de Questões";
         DOM.toggleFiltersBtn.classList.remove('hidden');
         DOM.filterCard.classList.remove('hidden');
@@ -43,7 +48,9 @@ export function navigateToView(viewId) {
     } else if (viewId === 'materias-view') {
         renderMateriasView();
     } else if (viewId === 'estatisticas-view' || viewId === 'inicio-view') {
-        updateStatsPageUI();
+        // A atualização agora é acionada pelo listener do Firestore,
+        // garantindo que os dados estejam prontos.
+        updateStatsPageUI(); 
     }
 
     DOM.mobileMenu.classList.add('hidden');
