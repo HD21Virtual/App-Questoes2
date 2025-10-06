@@ -29,7 +29,7 @@ async function onLogin(user) {
     setupAllListeners(user.uid);
     
     // Busca os dados gerais de questões
-    await fetchAllQuestions();
+    await fetchAllQuestions(); // Corrigido de fetchAllListeners para fetchAllQuestions
     
     // Configura os filtros com os dados carregados
     setupCustomSelects();
