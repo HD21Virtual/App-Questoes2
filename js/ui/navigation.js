@@ -1,73 +1,64 @@
 import DOM from '../dom-elements.js';
-import { state } from '../state.js';
 import { exitAddMode, renderFoldersAndCadernos } from '../features/caderno.js';
 import { renderMateriasView } from '../features/materias.js';
 import { clearAllFilters } from '../features/filter.js';
-import { updateStatsPageUI } from '../features/stats.js';
+import { setState, state } from '../state.js';
 
-/**
- * @file js/ui/navigation.js
- * @description Controla a navegação entre as diferentes visualizações (telas) da aplicação.
- */
+const allViews = [
+    DOM.inicioView,
+    DOM.vadeMecumView,
+    DOM.cadernosView,
+    DOM.materiasView,
+    DOM.revisaoView,
+    DOM.estatisticasView
+];
 
-export function handleNavigation(event) {
-    event.preventDefault();
-    const viewId = event.target.closest('.nav-link').dataset.view;
-    navigateToView(viewId);
-}
-
-export function navigateToView(viewId) {
-    if (state.isAddingQuestionsMode.active && viewId !== 'vade-mecum-view') {
+export function navigateToView(viewId, isUserClick = true) {
+    if (state.isAddingQuestionsMode.active && (viewId !== 'vade-mecum-view' || isUserClick)) {
         exitAddMode();
     }
 
-    // Esconde todas as views
-    Object.keys(DOM).forEach(key => {
-        if (key.endsWith('View') && DOM[key]) {
-            DOM[key].classList.add('hidden');
-        }
+    if (viewId === 'cadernos-view' && !state.isNavigatingBackFromAddMode) {
+        setState('currentFolderId', null);
+        setState('currentCadernoId', null);
+    }
+    setState('isNavigatingBackFromAddMode', false);
+
+    allViews.forEach(v => {
+        if (v) v.classList.add('hidden');
     });
 
-    // Mostra a view alvo
-    if (DOM[viewId]) {
-        DOM[viewId].classList.remove('hidden');
+    const targetView = allViews.find(v => v && v.id === viewId);
+    if (targetView) {
+        targetView.classList.remove('hidden');
     }
 
-    updateNavLinks(viewId);
-    
-    // Lógica específica para cada view
-    if (viewId === 'vade-mecum-view' && !state.isReviewSession) {
-        DOM.vadeMecumTitle.textContent = "Vade Mecum de Questões";
-        DOM.toggleFiltersBtn.classList.remove('hidden');
-        DOM.filterCard.classList.remove('hidden');
-        clearAllFilters();
+    document.querySelectorAll('.nav-link').forEach(navLink => {
+        navLink.classList.remove('text-blue-700', 'bg-blue-100');
+        navLink.classList.add('text-gray-500', 'hover:bg-gray-100', 'hover:text-gray-900');
+    });
+
+    document.querySelectorAll(`.nav-link[data-view="${viewId}"]`).forEach(matchingLink => {
+        matchingLink.classList.add('text-blue-700', 'bg-blue-100');
+        matchingLink.classList.remove('text-gray-500', 'hover:bg-gray-100', 'hover:text-gray-900');
+    });
+
+    if (viewId === 'vade-mecum-view') {
+        if (!state.isReviewSession && isUserClick) {
+            DOM.vadeMecumTitle.textContent = "Vade Mecum de Questões";
+            DOM.toggleFiltersBtn.classList.remove('hidden');
+            DOM.filterCard.classList.remove('hidden');
+            clearAllFilters();
+        }
     } else if (viewId === 'cadernos-view') {
-        state.currentFolderId = null;
-        state.currentCadernoId = null;
         renderFoldersAndCadernos();
     } else if (viewId === 'materias-view') {
+        setState('selectedMateria', null);
         renderMateriasView();
-    } else if (viewId === 'estatisticas-view' || viewId === 'inicio-view') {
-        // A atualização agora é acionada pelo listener do Firestore,
-        // garantindo que os dados estejam prontos.
-        updateStatsPageUI(); 
     }
 
-    DOM.mobileMenu.classList.add('hidden');
+    if (DOM.mobileMenu) {
+        DOM.mobileMenu.classList.add('hidden');
+    }
 }
 
-function updateNavLinks(activeViewId) {
-    document.querySelectorAll('.nav-link').forEach(navLink => {
-        if (navLink.dataset.view === activeViewId) {
-            navLink.classList.add('text-blue-700', 'bg-blue-100');
-            navLink.classList.remove('text-gray-500', 'hover:bg-gray-100', 'hover:text-gray-900');
-        } else {
-            navLink.classList.remove('text-blue-700', 'bg-blue-100');
-            navLink.classList.add('text-gray-500', 'hover:bg-gray-100', 'hover:text-gray-900');
-        }
-    });
-}
-
-export function handleHamburgerMenu() {
-    DOM.mobileMenu.classList.toggle('hidden');
-}
