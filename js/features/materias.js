@@ -1,30 +1,24 @@
-import { state } from '../state.js';
 import DOM from '../dom-elements.js';
+import { state, setState } from '../state.js';
 import { navigateToView } from '../ui/navigation.js';
-import { applyFilters, clearAllFilters } from './filter.js';
-
-/**
- * @file js/features/materias.js
- * @description Lida com a lógica da view "Matérias".
- */
-
-let selectedMateria = null;
+import { clearAllFilters, applyFilters } from './filter.js';
 
 export function renderMateriasView() {
+    if (!DOM.materiasListContainer) return;
+
     if (!state.currentUser) {
         DOM.materiasListContainer.innerHTML = '<p class="text-center text-gray-500">Por favor, faça login para ver as matérias.</p>';
-        DOM.assuntosListContainer.classList.add('hidden');
+        if (DOM.assuntosListContainer) DOM.assuntosListContainer.classList.add('hidden');
         return;
     }
 
-    if (selectedMateria) {
-        // Display assuntos for the selected materia
-        DOM.materiasViewTitle.textContent = selectedMateria.name;
+    if (state.selectedMateria) {
+        DOM.materiasViewTitle.textContent = state.selectedMateria.name;
         DOM.materiasListContainer.classList.add('hidden');
         DOM.assuntosListContainer.classList.remove('hidden');
         DOM.backToMateriasBtn.classList.remove('hidden');
 
-        const assuntosHtml = selectedMateria.assuntos.map(assunto => `
+        const assuntosHtml = state.selectedMateria.assuntos.map(assunto => `
             <div class="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer assunto-item" data-assunto-name="${assunto}">
                 <div class="flex items-center">
                     <i class="fas fa-file-alt text-gray-400 mr-3"></i>
@@ -35,15 +29,14 @@ export function renderMateriasView() {
         DOM.assuntosListContainer.innerHTML = `<div class="space-y-2">${assuntosHtml}</div>`;
 
     } else {
-        // Display all materias
         DOM.materiasViewTitle.textContent = 'Matérias';
         DOM.materiasListContainer.classList.remove('hidden');
         DOM.assuntosListContainer.classList.add('hidden');
         DOM.backToMateriasBtn.classList.add('hidden');
 
         if (state.filterOptions.materia.length === 0) {
-             DOM.materiasListContainer.innerHTML = '<p class="text-center text-gray-500">Nenhuma matéria encontrada. Adicione questões para vê-las aqui.</p>';
-             return;
+            DOM.materiasListContainer.innerHTML = '<p class="text-center text-gray-500">Nenhuma matéria encontrada. Adicione questões para vê-las aqui.</p>';
+            return;
         }
 
         const materiasHtml = state.filterOptions.materia.map(materia => `
@@ -64,42 +57,50 @@ export function renderMateriasView() {
     }
 }
 
-export function handleMateriaListClick(materiaName) {
-    selectedMateria = state.filterOptions.materia.find(m => m.name === materiaName);
-    renderMateriasView();
+
+export function handleMateriaListClick(event) {
+    const materiaItem = event.target.closest('.materia-item');
+    if (materiaItem) {
+        const materiaName = materiaItem.dataset.materiaName;
+        setState('selectedMateria', state.filterOptions.materia.find(m => m.name === materiaName));
+        renderMateriasView();
+    }
 }
 
-export function handleAssuntoListClick(assuntoName) {
-    const materiaName = selectedMateria.name;
+export async function handleAssuntoListClick(event) {
+    const assuntoItem = event.target.closest('.assunto-item');
+    if (assuntoItem) {
+        const assuntoName = assuntoItem.dataset.assuntoName;
+        const materiaName = state.selectedMateria.name;
 
-    navigateToView('vade-mecum-view');
-    
-    // Use a small timeout to ensure the view is rendered before manipulating the filters
-    setTimeout(() => {
-        clearAllFilters();
-        // Programmatically select materia
-        const materiaContainer = document.getElementById('materia-filter');
-        const materiaCheckbox = materiaContainer.querySelector(`.custom-select-option[data-value="${materiaName}"]`);
-        if (materiaCheckbox) {
-            materiaCheckbox.checked = true;
-            // Trigger change event to update UI and state
-            materiaContainer.querySelector('.custom-select-options').dispatchEvent(new Event('change', { bubbles: true }));
-        }
+        // Navigate first, then apply filters once the new view is loaded
+        await navigateToView('questoes', false);
 
-        // Another timeout to allow the assunto filter to be populated
+        // Use a small timeout to ensure the DOM is ready
         setTimeout(() => {
-            const assuntoContainer = document.getElementById('assunto-filter');
-            const assuntoCheckbox = assuntoContainer.querySelector(`.custom-select-option[data-value="${assuntoName}"]`);
-            if (assuntoCheckbox) {
-                assuntoCheckbox.checked = true;
-                assuntoContainer.querySelector('.custom-select-options').dispatchEvent(new Event('change', { bubbles: true }));
+            clearAllFilters();
+            
+            const materiaCheckbox = DOM.materiaFilter.querySelector(`.custom-select-option[data-value="${materiaName}"]`);
+            if (materiaCheckbox) {
+                materiaCheckbox.checked = true;
+                // Manually trigger the change logic
+                DOM.materiaFilter.querySelector('.custom-select-options').dispatchEvent(new Event('change', { bubbles: true }));
             }
-            // applyFilters is called automatically by the change event on the assunto filter
-        }, 100); 
-    }, 100);
+            
+            // Another timeout to allow assunto filter to populate
+            setTimeout(() => {
+                const assuntoCheckbox = DOM.assuntoFilter.querySelector(`.custom-select-option[data-value="${assuntoName}"]`);
+                if (assuntoCheckbox) {
+                    assuntoCheckbox.checked = true;
+                    DOM.assuntoFilter.querySelector('.custom-select-options').dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                applyFilters();
+            }, 100);
+        }, 100);
+    }
 }
 
 export function handleBackToMaterias() {
-    selectedMateria = null;
+    setState('selectedMateria', null);
     renderMateriasView();
 }
