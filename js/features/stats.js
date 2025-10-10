@@ -12,7 +12,7 @@ import { db } from '../firebase-config.js';
 export function updateStatsPanel(container = null, data = null) {
     let correctCount, incorrectCount, statsByMateria;
     const activeContainer = state.currentCadernoId ? DOM.savedCadernosListContainer : DOM.vadeMecumContentArea;
-    const statsContainer = container || activeContainer.querySelector('#stats-content');
+    const statsContainer = container || (activeContainer ? activeContainer.querySelector('#stats-content') : null);
     
     if (!statsContainer) return;
 
@@ -150,7 +150,7 @@ export async function generateStatsForQuestions(questionIds) {
 }
 
 export function updateStatsPageUI() {
-    if (!DOM.statsTotalQuestions) return;
+    if (!DOM.statsTotalQuestionsEl) return;
 
     let totalQuestions = 0;
     let totalCorrect = 0;
@@ -169,10 +169,10 @@ export function updateStatsPageUI() {
     const totalIncorrect = totalQuestions - totalCorrect;
     const geralAccuracy = totalQuestions > 0 ? ((totalCorrect / totalQuestions) * 100).toFixed(0) : 0;
 
-    DOM.statsTotalQuestions.textContent = totalQuestions;
-    DOM.statsTotalCorrect.textContent = totalCorrect;
-    DOM.statsTotalIncorrect.textContent = totalIncorrect;
-    DOM.statsGeralAccuracy.textContent = `${geralAccuracy}%`;
+    DOM.statsTotalQuestionsEl.textContent = totalQuestions;
+    DOM.statsTotalCorrectEl.textContent = totalCorrect;
+    DOM.statsTotalIncorrectEl.textContent = totalIncorrect;
+    DOM.statsGeralAccuracyEl.textContent = `${geralAccuracy}%`;
 
     renderWeeklyChart();
     renderHomePerformanceChart(materiaTotals);
