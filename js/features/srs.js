@@ -1,32 +1,29 @@
-import { state } from '../state.js';
+import { Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { state, setState } from '../state.js';
 import DOM from '../dom-elements.js';
 import { navigateToView } from '../ui/navigation.js';
 import { displayQuestion, renderAnsweredQuestion } from './question-viewer.js';
 import { updateStatsPanel } from './stats.js';
-import { saveUserAnswer, updateQuestionHistory, setSrsReviewItem } from '../services/firestore.js';
+import { setSrsReviewItem, saveUserAnswer, updateQuestionHistory } from '../services/firestore.js';
 
-/**
- * @file js/features/srs.js
- * @description Lida com a lógica do Sistema de Repetição Espaçada (SRS).
- */
+const reviewIntervals = [1, 3, 7, 15, 30, 90]; // Days
+
+function getNextReviewDate(stage) {
+    const index = Math.min(stage, reviewIntervals.length - 1);
+    const daysToAdd = reviewIntervals[index];
+    const date = new Date();
+    date.setDate(date.getDate() + daysToAdd);
+    return Timestamp.fromDate(date);
+}
 
 export async function handleSrsFeedback(feedback) {
     const question = state.filteredQuestions[state.currentQuestionIndex];
-    if(!question) return;
+    const isCorrect = state.selectedAnswer === question.correctAnswer;
 
-    // Use selectedAnswer from the viewer module if it exists, otherwise assume it's a review feedback
-    let isCorrect;
-    if (state.selectedAnswer !== null) {
-        isCorrect = state.selectedAnswer === question.correctAnswer;
-    } else {
-        isCorrect = feedback !== 'again'; // 'again' always means incorrect
-    }
-    
-    // Only add to session stats if it's the first time answering in this session
     if (!state.sessionStats.some(s => s.questionId === question.id)) {
-         state.sessionStats.push({
+        state.sessionStats.push({
             questionId: question.id, isCorrect: isCorrect, materia: question.materia,
-            assunto: question.assunto, userAnswer: state.selectedAnswer || 'srs_feedback'
+            assunto: question.assunto, userAnswer: state.selectedAnswer
         });
     }
 
@@ -43,23 +40,28 @@ export async function handleSrsFeedback(feedback) {
             default: newStage = currentStage;
         }
 
-        await setSrsReviewItem(question.id, newStage);
+        const nextReview = getNextReviewDate(newStage);
+        const reviewData = { stage: newStage, nextReview: nextReview, questionId: question.id };
+        await setSrsReviewItem(question.id, reviewData);
+        state.userReviewItemsMap.set(question.id, reviewData);
+
         await saveUserAnswer(question.id, state.selectedAnswer, isCorrect);
-        await updateQuestionHistory(question.id, isCorrect);
+        const historyIsCorrect = (feedback !== 'again') && isCorrect;
+        await updateQuestionHistory(question.id, historyIsCorrect);
     }
 
-    renderAnsweredQuestion(isCorrect, state.selectedAnswer, true);
+    renderAnsweredQuestion(isCorrect, state.selectedAnswer, false);
     updateStatsPanel();
 }
 
 export function updateReviewCard() {
-    if (!state.currentUser) {
-        DOM.reviewCard.classList.add('hidden');
+    if (!DOM.reviewCard || !state.currentUser) {
+        if(DOM.reviewCard) DOM.reviewCard.classList.add('hidden');
         return;
     }
     const now = new Date();
-    now.setHours(0, 0, 0, 0); 
-    
+    now.setHours(0, 0, 0, 0);
+
     const questionsToReview = Array.from(state.userReviewItemsMap.values()).filter(item => {
         if (!item.nextReview) return false;
         const reviewDate = item.nextReview.toDate();
@@ -73,35 +75,39 @@ export function updateReviewCard() {
     DOM.reviewCard.classList.remove('hidden');
 }
 
-export function startReviewSession() {
-    if(!state.currentUser) return;
-    
+export async function handleStartReview() {
+    if (!state.currentUser) return;
+
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    
-    const questionsToReviewIds = Array.from(state.userReviewItemsMap.values())
+
+    const questionsToReview = Array.from(state.userReviewItemsMap.values())
         .filter(item => {
             if (!item.nextReview) return false;
             const reviewDate = item.nextReview.toDate();
             reviewDate.setHours(0, 0, 0, 0);
             return reviewDate <= now;
-        })
-        .map(item => item.questionId);
+        });
+
+    const questionsToReviewIds = questionsToReview.map(item => item.questionId);
 
     if (questionsToReviewIds.length > 0) {
-        state.isReviewSession = true;
-        state.filteredQuestions = state.allQuestions.filter(q => questionsToReviewIds.includes(q.id));
-        state.sessionStats = [];
-        state.currentQuestionIndex = 0;
-        
-        navigateToView('vade-mecum-view');
-        
-        DOM.vadeMecumTitle.textContent = "Sessão de Revisão";
-        DOM.toggleFiltersBtn.classList.add('hidden');
-        DOM.filterCard.classList.add('hidden');
-        DOM.selectedFiltersContainer.innerHTML = `<span class="text-gray-500">Revisando ${state.filteredQuestions.length} questões.</span>`;
+        setState('isReviewSession', true);
+        setState('filteredQuestions', state.allQuestions.filter(q => questionsToReviewIds.includes(q.id)));
+        setState('sessionStats', []);
+        setState('currentQuestionIndex', 0);
 
-        displayQuestion();
-        updateStatsPanel();
+        await navigateToView('questoes', false);
+        
+        // Wait for DOM update
+        setTimeout(() => {
+            if (DOM.vadeMecumTitle) DOM.vadeMecumTitle.textContent = "Sessão de Revisão";
+            if (DOM.toggleFiltersBtn) DOM.toggleFiltersBtn.classList.add('hidden');
+            if (DOM.filterCard) DOM.filterCard.classList.add('hidden');
+            if (DOM.selectedFiltersContainer) DOM.selectedFiltersContainer.innerHTML = `<span class="text-gray-500">Revisando ${state.filteredQuestions.length} questões.</span>`;
+
+            displayQuestion();
+            updateStatsPanel();
+        }, 100);
     }
 }
