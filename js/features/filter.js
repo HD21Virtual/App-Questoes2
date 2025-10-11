@@ -85,6 +85,58 @@ export function clearAllFilters() {
     applyFilters();
 }
 
+
+export function loadFilter(filter) {
+    if(!filter) return;
+
+    // Set search
+    DOM.searchInput.value = filter.search || '';
+
+    // Set Tipo
+    if (filter.tipo) {
+        DOM.tipoFilterGroup.querySelectorAll('.filter-btn-toggle').forEach(btn => {
+            btn.classList.remove('active-filter');
+            if (btn.dataset.value === filter.tipo) {
+                btn.classList.add('active-filter');
+            }
+        });
+    }
+
+    // Set Materias
+    const materiaContainer = DOM.materiaFilter;
+    materiaContainer.querySelectorAll('.custom-select-option:checked').forEach(cb => cb.checked = false); // uncheck all
+    
+    const materias = filter.materias || [];
+    if (materias.length > 0) {
+        materias.forEach(materiaName => {
+            const checkbox = materiaContainer.querySelector(`.custom-select-option[data-value="${materiaName}"]`);
+            if (checkbox) checkbox.checked = true;
+        });
+    }
+    materiaContainer.querySelector('.custom-select-options').dispatchEvent(new Event('change', { bubbles: true }));
+
+
+    // Set Assuntos - needs a slight delay for the options to populate
+    setTimeout(() => {
+        const assuntos = filter.assuntos || [];
+        if (assuntos.length > 0) {
+            const assuntoContainer = DOM.assuntoFilter;
+            assuntoContainer.querySelectorAll('.custom-select-option:checked').forEach(cb => cb.checked = false); // uncheck all
+            
+            assuntos.forEach(assuntoName => {
+                const checkbox = assuntoContainer.querySelector(`.custom-select-option[data-value="${assuntoName}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+            assuntoContainer.querySelector('.custom-select-options').dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        
+        // Finally, apply the filters to update the view
+        applyFilters();
+
+    }, 150); 
+}
+
+
 function setupCustomSelect(container) {
     const button = container.querySelector('.custom-select-button');
     const valueSpan = container.querySelector('.custom-select-value');
