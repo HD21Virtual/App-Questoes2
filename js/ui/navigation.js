@@ -1,15 +1,12 @@
-import DOM from '../dom-elements.js';
+import DOM, { initDOM } from '../dom-elements.js';
 import { exitAddMode, renderFoldersAndCadernos } from '../features/caderno.js';
 import { renderMateriasView } from '../features/materias.js';
-import { clearAllFilters, applyFilters, setupCustomSelects } from '../features/filter.js';
+import { applyFilters, setupCustomSelects } from '../features/filter.js';
 import { setState, state } from '../state.js';
 import { updateStatsPageUI } from '../features/stats.js';
-import { initDOM } from '../dom-elements.js';
 import { updateReviewCard } from '../features/srs.js';
 
-const mainContent = document.getElementById('main-content');
-
-// Functions to initialize each view's specific logic after its HTML is loaded
+// Funções para inicializar a lógica específica de cada view após seu HTML ser carregado
 async function initInicioView() {
     updateStatsPageUI();
 }
@@ -36,7 +33,7 @@ async function initEstatisticasView() {
     updateStatsPageUI();
 }
 
-// Map view names to their initializer functions
+// Mapeia os nomes das views para suas funções de inicialização
 const viewInitializers = {
     'inicio': initInicioView,
     'questoes': initQuestoesView,
@@ -47,11 +44,17 @@ const viewInitializers = {
 };
 
 /**
- * Fetches the HTML for a view, injects it into the main content area,
- * and runs the corresponding initializer script.
- * @param {string} viewId The name of the view to load (e.g., 'inicio').
+ * Busca o HTML de uma view, injeta na área de conteúdo principal,
+ * e executa o inicializador correspondente.
+ * @param {string} viewId O nome da view a ser carregada (ex: 'inicio').
  */
 async function loadAndInitView(viewId) {
+    const mainContent = document.querySelector('main');
+    if (!mainContent) {
+        console.error("Elemento <main> não encontrado para carregar a view.");
+        return;
+    }
+
     try {
         const response = await fetch(`views/${viewId}.html`);
         if (!response.ok) {
@@ -59,22 +62,22 @@ async function loadAndInitView(viewId) {
         }
         mainContent.innerHTML = await response.text();
         
-        // Now that the new HTML is in the DOM, re-initialize the DOM element references
+        // Agora que o novo HTML está no DOM, reinicializa as referências dos elementos do DOM
         initDOM();
         
-        // Run the specific setup function for the loaded view
+        // Executa a função de configuração específica para a view carregada
         const initializer = viewInitializers[viewId];
         if (initializer) {
             await initializer();
         }
     } catch (error) {
         console.error('Falha ao carregar a view:', error);
-        mainContent.innerHTML = `<p class="text-center text-red-500">Erro ao carregar a página. Tente novamente mais tarde.</p>`;
+        if(mainContent) mainContent.innerHTML = `<p class="text-center text-red-500">Erro ao carregar a página. Tente novamente mais tarde.</p>`;
     }
 }
 
 export async function navigateToView(viewId, isUserClick = true) {
-    // Logic to handle exiting special modes when navigating away
+    // Lógica para lidar com a saída de modos especiais ao navegar
     if (state.isAddingQuestionsMode.active && viewId !== 'questoes') {
         exitAddMode();
     }
@@ -85,21 +88,21 @@ export async function navigateToView(viewId, isUserClick = true) {
     }
     setState('isNavigatingBackFromAddMode', false);
     
-    // Load the view's HTML and run its setup scripts
+    // Carrega o HTML da view e executa seus scripts de configuração
     await loadAndInitView(viewId);
 
-    // Update the active state of navigation links
+    // Atualiza o estado ativo dos links de navegação
     document.querySelectorAll('.nav-link').forEach(navLink => {
         navLink.classList.remove('text-blue-700', 'bg-blue-100');
         navLink.classList.add('text-gray-500', 'hover:bg-gray-100', 'hover:text-gray-900');
     });
 
-    document.querySelectorAll(`.nav-link[data-view="${viewId}"]`).forEach(matchingLink => {
+    document.querySelectorAll(`.nav-link[href*="${viewId}.html"]`).forEach(matchingLink => {
         matchingLink.classList.add('text-blue-700', 'bg-blue-100');
         matchingLink.classList.remove('text-gray-500', 'hover:bg-gray-100', 'hover:text-gray-900');
     });
     
-    // Close mobile menu if it's open
+    // Fecha o menu móvel se estiver aberto
     if (DOM.mobileMenu) {
         DOM.mobileMenu.classList.add('hidden');
     }
