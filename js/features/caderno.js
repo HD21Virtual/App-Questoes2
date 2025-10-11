@@ -6,7 +6,7 @@ import { displayQuestion } from './question-viewer.js';
 import { generateStatsForQuestions } from './stats.js';
 import { showItemStatsModal, openNameModal } from '../ui/modal.js';
 import { applyFilters } from './filter.js';
-import { removeQuestionIdFromCaderno as removeQuestionIdFromFirestore, addQuestionIdsToCaderno as addQuestionIdsToFirestore } from '../services/firestore.js';
+import { removeQuestionFromCaderno as removeQuestionIdFromFirestore, addQuestionsToCaderno as addQuestionIdsToFirestore } from '../services/firestore.js';
 
 // Renders the view when inside a specific notebook, showing the question solver UI.
 async function renderCadernoContentView() {
