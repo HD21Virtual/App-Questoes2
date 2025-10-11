@@ -32,6 +32,7 @@ export function openLoadModal() {
         return;
     }
     DOM.searchSavedFiltersInput.value = '';
+    updateSavedFiltersList(); // Atualiza a lista ao abrir
     DOM.loadModal.classList.remove('hidden');
 }
 
@@ -66,7 +67,11 @@ export function openConfirmationModal(type, id = null) {
     let title = '';
     let text = '';
 
-    if (type === 'folder') {
+    if (type === 'filter') {
+        const filterName = state.userFilters.find(f => f.id === id)?.name || '';
+        title = `Excluir Filtro`;
+        text = `Deseja excluir o filtro <strong>"${filterName}"</strong>?`;
+    } else if (type === 'folder') {
         const folderName = state.userFolders.find(f => f.id === id)?.name || '';
         title = `Excluir Pasta`;
         text = `Deseja excluir a pasta <strong>"${folderName}"</strong>? <br><br> <span class="font-bold text-red-600">Todos os cadernos dentro dela também serão excluídos.</span>`;
@@ -189,7 +194,7 @@ export async function handleConfirmation() {
     }
     
     try {
-        if (state.deletingType === 'folder' || state.deletingType === 'caderno') {
+        if (state.deletingType === 'folder' || state.deletingType === 'caderno' || state.deletingType === 'filter') {
              if (state.deletingId) {
                 await deleteItem(state.deletingType, state.deletingId);
              }
@@ -203,5 +208,28 @@ export async function handleConfirmation() {
     } finally {
         // For info modals, this will just close it. For confirmation modals, it resets state.
         closeConfirmationModal();
+    }
+}
+
+
+// --- Funções de Atualização de Conteúdo do Modal ---
+
+export function updateSavedFiltersList() {
+    if (!DOM.savedFiltersListContainer) return;
+
+    const searchTerm = DOM.searchSavedFiltersInput ? DOM.searchSavedFiltersInput.value.toLowerCase() : '';
+    const filtered = state.userFilters.filter(f => f.name.toLowerCase().includes(searchTerm));
+
+    if (filtered.length === 0) {
+        DOM.savedFiltersListContainer.innerHTML = `<p class="text-center text-gray-500 p-4">Nenhum filtro salvo encontrado.</p>`;
+    } else {
+        DOM.savedFiltersListContainer.innerHTML = filtered.map(f => `
+            <div class="flex justify-between items-center p-2 rounded-md hover:bg-gray-100">
+                <button class="load-filter-btn text-left flex-grow" data-id="${f.id}">${f.name}</button>
+                <button class="delete-filter-btn text-gray-400 hover:text-red-600 p-2 rounded-full flex-shrink-0 ml-2" data-id="${f.id}">
+                    <i class="fas fa-trash-alt pointer-events-none"></i>
+                </button>
+            </div>
+        `).join('');
     }
 }
