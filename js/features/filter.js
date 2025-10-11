@@ -11,6 +11,12 @@ import { saveSessionStats } from '../services/firestore.js';
  */
 
 export async function applyFilters() {
+    // Adiciona uma verificação para garantir que os elementos de filtro existam antes de prosseguir.
+    // Isso evita erros quando a função é chamada em views que não têm os filtros.
+    if (!DOM.materiaFilter || !DOM.assuntoFilter || !DOM.tipoFilterGroup || !DOM.searchInput) {
+        return;
+    }
+
     if (!state.isAddingQuestionsMode.active && state.sessionStats.length > 0 && !state.isReviewSession) {
         await saveSessionStats();
         clearSessionStats();
@@ -217,3 +223,4 @@ export function setupCustomSelects() {
         setupCustomSelect(container);
     });
 }
+
