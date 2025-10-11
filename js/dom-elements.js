@@ -11,6 +11,7 @@ export function initDOM() {
     
     // Main Content Area (for navigation)
     DOM.mainContent = document.querySelector('main');
+    DOM.vadeMecumContentArea = document.getElementById('vade-mecum-content-area');
 
     // Navigation
     DOM.mainNav = document.getElementById('main-nav');
@@ -74,7 +75,7 @@ export function initDOM() {
 
     // Load Filter Modal
     DOM.loadModal = document.getElementById('load-modal');
-    DOM.savedFiltersListContainerLoad = document.getElementById('saved-filters-list-container'); // Renamed to avoid conflict
+    DOM.savedFiltersListContainer = document.getElementById('saved-filters-list-container'); // Renamed to avoid conflict
     DOM.searchSavedFiltersInput = document.getElementById('search-saved-filters-input');
 
     // Caderno Modal
