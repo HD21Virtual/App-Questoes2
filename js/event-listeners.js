@@ -19,7 +19,10 @@ function handleGlobalClick(event) {
     if (target.closest('.nav-link')) {
         event.preventDefault();
         const href = target.closest('a').getAttribute('href');
-        const view = href.split('.')[0];
+        let view = href.split('.')[0];
+        if (view === 'index') {
+            view = 'inicio';
+        }
         navigateToView(view);
     }
     
@@ -211,3 +214,4 @@ export function setupAllEventListeners() {
         DOM.searchSavedFiltersInput.addEventListener('input', updateSavedFiltersList);
     }
 }
+
