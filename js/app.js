@@ -1,59 +1,42 @@
-import {
-    onAuthStateChanged,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    GoogleAuthProvider,
-    signInWithPopup,
-    signOut
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { auth } from '../firebase-config.js';
-import { state, setState, resetStateOnLogout, clearUnsubscribes } from '../state.js';
-import { setupAllListeners } from '../services/firestore.js';
-import { updateUserUI } from '../ui/ui-helpers.js';
-import { closeAuthModal } from '../ui/modal.js';
-import DOM from '../dom-elements.js';
+import { initDOM } from './dom-elements.js';
+import { initAuth } from './services/auth.js';
+import { fetchAllQuestions } from './services/firestore.js';
+import { setupAllEventListeners } from './event-listeners.js';
+import { navigateToView } from './ui/navigation.js';
 
-export function initAuth() {
-    onAuthStateChanged(auth, (user) => {
-        clearUnsubscribes();
-        setState('currentUser', user);
+/**
+ * @file js/app.js
+ * @description Ponto de entrada principal da aplicação.
+ * Inicializa a aplicação, configura listeners e carrega a view inicial.
+ */
 
-        if (user) {
-            updateUserUI(user);
-            closeAuthModal();
-            setupAllListeners(user.uid);
-        } else {
-            resetStateOnLogout();
-            updateUserUI(null);
-        }
-    });
+// Função principal de inicialização da aplicação
+async function main() {
+    // Inicializa as referências aos elementos do DOM
+    initDOM();
+    
+    // Configura todos os event listeners da aplicação
+    setupAllEventListeners();
+    
+    // Inicia o listener de autenticação do Firebase
+    // O initAuth cuidará de buscar os dados do usuário ou resetar o estado
+    initAuth();
+    
+    // Busca todas as questões do banco de dados para o estado global
+    // Isso é feito uma vez para otimizar a performance
+    await fetchAllQuestions();
+    
+    // Determina a página atual pela URL para carregar a view correta
+    const path = window.location.pathname;
+    const pageName = path.substring(path.lastIndexOf('/') + 1).replace('.html', '');
+    
+    // Define a view inicial, tratando 'index' como 'inicio'
+    const initialView = ['index', 'questoes', 'cadernos', 'materias', 'revisao', 'estatisticas'].includes(pageName) && pageName !== '' ? pageName : 'inicio';
+    
+    // Navega para a view inicial
+    // A função navigateToView irá carregar o HTML e executar os scripts da view
+    await navigateToView(initialView === 'index' ? 'inicio' : initialView);
 }
 
-export async function handleAuth(action) {
-    DOM.authError.classList.add('hidden');
-    try {
-        if (action === 'login') {
-            await signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value);
-        } else if (action === 'register') {
-            await createUserWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value);
-        } else if (action === 'logout') {
-            await signOut(auth);
-            // Redireciona para a página inicial após o logout
-            window.location.href = 'index.html';
-        }
-    } catch (error) {
-        DOM.authError.textContent = error.message;
-        DOM.authError.classList.remove('hidden');
-    }
-}
-
-export async function handleGoogleAuth() {
-    DOM.authError.classList.add('hidden');
-    try {
-        const provider = new GoogleAuthProvider();
-        await signInWithPopup(auth, provider);
-    } catch (error) {
-        DOM.authError.textContent = error.message;
-        DOM.authError.classList.remove('hidden');
-    }
-}
+// Executa a função principal quando o DOM estiver completamente carregado
+document.addEventListener('DOMContentLoaded', main);
