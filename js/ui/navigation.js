@@ -60,8 +60,20 @@ async function loadAndInitView(viewId) {
         if (!response.ok) {
             throw new Error(`A resposta da rede não foi 'ok' para ${viewId}.html`);
         }
-        mainContent.innerHTML = await response.text();
+        const html = await response.text();
         
+        // Usa DOMParser para extrair apenas o conteúdo dentro da tag <main> do arquivo carregado
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newMainContent = doc.querySelector('main');
+
+        if (newMainContent) {
+            mainContent.innerHTML = newMainContent.innerHTML;
+        } else {
+            // Fallback se a view não tiver uma tag <main>
+            mainContent.innerHTML = html;
+        }
+
         // Agora que o novo HTML está no DOM, reinicializa as referências dos elementos do DOM
         initDOM();
         
@@ -97,7 +109,8 @@ export async function navigateToView(viewId, isUserClick = true) {
         navLink.classList.add('text-gray-500', 'hover:bg-gray-100', 'hover:text-gray-900');
     });
 
-    document.querySelectorAll(`.nav-link[href*="${viewId}.html"]`).forEach(matchingLink => {
+    const hrefSelector = viewId === 'inicio' ? 'index.html' : `${viewId}.html`;
+    document.querySelectorAll(`.nav-link[href*="${hrefSelector}"]`).forEach(matchingLink => {
         matchingLink.classList.add('text-blue-700', 'bg-blue-100');
         matchingLink.classList.remove('text-gray-500', 'hover:bg-gray-100', 'hover:text-gray-900');
     });
