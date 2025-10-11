@@ -6,6 +6,7 @@ import { updateStatsPageUI } from '../features/stats.js';
 import { updateReviewCard } from '../features/srs.js';
 import { displayQuestion } from "../features/question-viewer.js";
 import DOM from '../dom-elements.js';
+import { updateSavedFiltersList } from '../ui/modal.js';
 
 let unsubscribes = [];
 
@@ -39,22 +40,7 @@ function setupFiltrosListener(userId) {
     const filtrosCollection = collection(db, 'users', userId, 'filtros');
     const unsubFiltros = onSnapshot(filtrosCollection, (snapshot) => {
         state.userFilters = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        const searchTerm = DOM.searchSavedFiltersInput.value.toLowerCase();
-        const filtered = state.userFilters.filter(f => f.name.toLowerCase().includes(searchTerm));
-
-        if (filtered.length === 0) {
-            DOM.savedFiltersListContainer.innerHTML = `<p class="text-center text-gray-500">Nenhum filtro encontrado.</p>`;
-        } else {
-            DOM.savedFiltersListContainer.innerHTML = filtered.map(f => `
-                <div class="flex justify-between items-center p-2 rounded-md hover:bg-gray-100">
-                    <button class="load-filter-btn text-left" data-id="${f.id}">${f.name}</button>
-                    <button class="delete-filter-btn text-red-500 hover:text-red-700" data-id="${f.id}">
-                        <i class="fas fa-trash-alt pointer-events-none"></i>
-                    </button>
-                </div>
-            `).join('');
-        }
+        updateSavedFiltersList();
     });
     unsubscribes.push(unsubFiltros);
 }
@@ -315,29 +301,23 @@ export async function updateQuestionHistory(questionId, isCorrect) {
     }
 }
 
-export async function setSrsReviewItem(questionId, newStage) {
-    const getNextReviewDate = (stage) => {
-        const reviewIntervals = [1, 3, 7, 15, 30, 90]; // Days
-        const index = Math.min(stage, reviewIntervals.length - 1);
-        const daysToAdd = reviewIntervals[index];
-        const date = new Date();
-        date.setDate(date.getDate() + daysToAdd);
-        return Timestamp.fromDate(date);
-    };
-
-    const nextReview = getNextReviewDate(newStage);
-    const reviewData = { stage: newStage, nextReview: nextReview, questionId: questionId };
+export async function setSrsReviewItem(questionId, reviewData) {
+    if (!state.currentUser) return;
     const reviewRef = doc(db, 'users', state.currentUser.uid, 'reviewItems', questionId);
     await setDoc(reviewRef, reviewData, { merge: true });
 }
 
-export async function createOrUpdateName(type, name, editingId) {
+export async function createOrUpdateName(type, name, editingId, folderId = null) {
     const collectionPath = type === 'folder' ? 'folders' : 'cadernos';
     if (editingId) { // Editando
         const itemRef = doc(db, 'users', state.currentUser.uid, collectionPath, editingId);
         await updateDoc(itemRef, { name: name });
     } else { // Criando
         const data = { name: name, createdAt: serverTimestamp() };
+        if (type === 'caderno') {
+            data.folderId = folderId;
+            data.questionIds = [];
+        }
         const collectionRef = collection(db, 'users', state.currentUser.uid, collectionPath);
         await addDoc(collectionRef, data);
     }
@@ -397,6 +377,9 @@ export async function deleteItem(type, id) {
     } else if (type === 'caderno') {
         const cadernoRef = doc(db, 'users', state.currentUser.uid, 'cadernos', id);
         await deleteDoc(cadernoRef);
+    } else if (type === 'filter') {
+        const filterRef = doc(db, 'users', state.currentUser.uid, 'filtros', id);
+        await deleteDoc(filterRef);
     }
 }
 
