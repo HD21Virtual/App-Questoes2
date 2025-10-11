@@ -8,6 +8,9 @@ export function initDOM() {
     DOM.materiasView = document.getElementById('materias-view');
     DOM.revisaoView = document.getElementById('revisao-view');
     DOM.estatisticasView = document.getElementById('estatisticas-view');
+    
+    // Main Content Area (for navigation)
+    DOM.mainContent = document.querySelector('main');
 
     // Navigation
     DOM.mainNav = document.getElementById('main-nav');
@@ -33,6 +36,8 @@ export function initDOM() {
     DOM.selectedFiltersContainer = document.getElementById('selected-filters-container');
     DOM.filterCard = document.getElementById('filter-card');
     DOM.toggleFiltersBtn = document.getElementById('toggle-filters-btn');
+    DOM.customSelects = document.querySelectorAll('.custom-select-container');
+
 
     // Cadernos View
     DOM.savedCadernosListContainer = document.getElementById('saved-cadernos-list-container');
@@ -69,7 +74,7 @@ export function initDOM() {
 
     // Load Filter Modal
     DOM.loadModal = document.getElementById('load-modal');
-    DOM.savedFiltersListContainer = document.getElementById('saved-filters-list-container');
+    DOM.savedFiltersListContainerLoad = document.getElementById('saved-filters-list-container'); // Renamed to avoid conflict
     DOM.searchSavedFiltersInput = document.getElementById('search-saved-filters-input');
 
     // Caderno Modal
@@ -96,4 +101,3 @@ export function initDOM() {
 }
 
 export default DOM;
-
