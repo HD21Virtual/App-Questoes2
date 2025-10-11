@@ -1,23 +1,59 @@
-import { initAuth } from './services/auth.js';
-import { fetchAllQuestions } from './services/firestore.js';
-import { setupAllEventListeners } from './event-listeners.js';
-import { navigateToView } from './ui/navigation.js';
-import { initDOM } from './dom-elements.js';
+import {
+    onAuthStateChanged,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signOut
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { auth } from '../firebase-config.js';
+import { state, setState, resetStateOnLogout, clearUnsubscribes } from '../state.js';
+import { setupAllListeners } from '../services/firestore.js';
+import { updateUserUI } from '../ui/ui-helpers.js';
+import { closeAuthModal } from '../ui/modal.js';
+import DOM from '../dom-elements.js';
 
-async function main() {
-    // 1. Initialize static DOM elements from the main shell (header, modals, etc.)
-    initDOM();
+export function initAuth() {
+    onAuthStateChanged(auth, (user) => {
+        clearUnsubscribes();
+        setState('currentUser', user);
 
-    // 2. Set up all global event listeners for the application (clicks, inputs, etc.)
-    setupAllEventListeners();
-
-    // 3. Fetch all question data in the background so it's ready for the views
-    await fetchAllQuestions();
-    
-    // 4. Initialize authentication. The auth state listener will trigger the initial
-    //    navigation to the 'inicio' view once the user state is determined.
-    initAuth();
+        if (user) {
+            updateUserUI(user);
+            closeAuthModal();
+            setupAllListeners(user.uid);
+        } else {
+            resetStateOnLogout();
+            updateUserUI(null);
+        }
+    });
 }
 
-// Wait for the DOM to be fully loaded before running the main script
-document.addEventListener('DOMContentLoaded', main);
+export async function handleAuth(action) {
+    DOM.authError.classList.add('hidden');
+    try {
+        if (action === 'login') {
+            await signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value);
+        } else if (action === 'register') {
+            await createUserWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value);
+        } else if (action === 'logout') {
+            await signOut(auth);
+            // Redireciona para a página inicial após o logout
+            window.location.href = 'index.html';
+        }
+    } catch (error) {
+        DOM.authError.textContent = error.message;
+        DOM.authError.classList.remove('hidden');
+    }
+}
+
+export async function handleGoogleAuth() {
+    DOM.authError.classList.add('hidden');
+    try {
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+    } catch (error) {
+        DOM.authError.textContent = error.message;
+        DOM.authError.classList.remove('hidden');
+    }
+}
